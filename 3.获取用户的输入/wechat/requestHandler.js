@@ -1,8 +1,9 @@
 let config = require('../config')
 let sha1 = require('sha1')
+let {parseString} = require('xml2js')
 
 module.exports = ()=>{
-  return (request,response,next)=>{
+  return async (request,response,next)=>{
     /*
        1.微信服务器验证开发者服务器有效性时请求类型是GET请求，内容如下：
             { signature: '64a5816ea025c749a242dd2fd0616504988f991b',  //微信服务器经过特殊加密后的一段随机字符串
@@ -44,19 +45,34 @@ module.exports = ()=>{
     //如果是转发用户消息
     else if(sha1Str === signature && request.method === 'POST'){
       //微信服务器发过来的：流式数据、数据格式为xml
+
+      //1.获取微信服务器发过来的xml数据
       /*
-      * <xml>
+        <xml>
           <ToUserName><![CDATA[gh_afd83bce98ae]]></ToUserName>
           <FromUserName><![CDATA[o1KCX0_v9SZYkIlfb1NITuA2lL-U]]></FromUserName>
-          <CreateTime>1564545394</CreateTime>
+          <CreateTime>1564555310</CreateTime>
           <MsgType><![CDATA[text]]></MsgType>
-          <Content><![CDATA[你好，中午吃饭了]]></Content>
-          <MsgId>22398906631812545</MsgId>
+          <Content><![CDATA[你好]]></Content>
+          <MsgId>22399046075081465</MsgId>
         </xml>
-      * */
-      request.on('data',(data)=>{
-          console.log(data.toString())
-      })
+      */
+      let xmlData = await getXMLData(request)
+
+      //2.将xml数据变成js对象
+      /*
+        { xml:
+           { ToUserName: [ 'gh_afd83bce98ae' ],
+             FromUserName: [ 'o1KCX0_v9SZYkIlfb1NITuA2lL-U' ],
+             CreateTime: [ '1564555707' ],
+             MsgType: [ 'text' ],
+             Content: [ '你好' ],
+             MsgId: [ '22399052353295960' ] }
+       }
+      */
+      let objData = parseXml2Js(xmlData)
+      console.log(objData);
+
     }
 
     else{
@@ -65,3 +81,33 @@ module.exports = ()=>{
 
   }
 }
+
+//获取微信服务器发过来的xml数据
+function getXMLData(request) {
+  return new Promise((resolve)=>{
+    let result = ''
+    request.on('data',(data)=>{
+      result += data
+    })
+    request.on('end',()=>{
+      resolve(result)
+    })
+  })
+}
+
+//将xml数据整理成js对象
+function parseXml2Js(xmlData) {
+  let result = null
+  parseString(xmlData,{trim:true},(err,data)=>{
+    if(!err){
+      result = data
+    }else{
+      console.log(err)
+    }
+  })
+  return result
+}
+
+
+
+
