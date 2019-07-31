@@ -1,6 +1,7 @@
 let config = require('../config')
 let sha1 = require('sha1')
-let {parseString} = require('xml2js')
+let {getXMLData,parseXml2Js,formatObjData} = require('../tools/parseData')
+
 
 module.exports = ()=>{
   return async (request,response,next)=>{
@@ -86,6 +87,67 @@ module.exports = ()=>{
       let userInputData = formatObjData(objData)
       console.log(userInputData);
 
+      //自动回复
+      if(userInputData.Content === '你好'){
+        response.send(`
+                        <xml>
+                          <ToUserName><![CDATA[${userInputData.FromUserName}]]></ToUserName>
+                          <FromUserName><![CDATA[${userInputData.ToUserName}]]></FromUserName>
+                          <CreateTime>${Date.now()}</CreateTime>
+                          <MsgType><![CDATA[text]]></MsgType>
+                          <Content><![CDATA[都挺好的]]></Content>
+                        </xml>`)
+      }
+      else if(userInputData.MsgType === 'image'){
+        response.send(`
+                        <xml>
+                          <ToUserName><![CDATA[${userInputData.FromUserName}]]></ToUserName>
+                          <FromUserName><![CDATA[${userInputData.ToUserName}]]></FromUserName>
+                          <CreateTime>${Date.now()}</CreateTime>
+                          <MsgType><![CDATA[image]]></MsgType>
+                          <Image>
+                            <MediaId><![CDATA[${userInputData.MediaId}]]></MediaId>
+                          </Image>
+                        </xml>`)
+      }
+      else if(userInputData.MsgType === 'voice'){
+        response.send(`
+                        <xml>
+                          <ToUserName><![CDATA[${userInputData.FromUserName}]]></ToUserName>
+                          <FromUserName><![CDATA[${userInputData.ToUserName}]]></FromUserName>
+                          <CreateTime>${Date.now()}</CreateTime>
+                          <MsgType><![CDATA[voice]]></MsgType>
+                            <Voice>
+                              <MediaId><![CDATA[${userInputData.MediaId}]]></MediaId>
+                            </Voice>
+                        </xml>`)
+      }
+      //暂时无法实现
+      /*else if(userInputData.MsgType === 'video'){
+        response.send(`
+                        <xml>
+                          <ToUserName><![CDATA[${userInputData.FromUserName}]]></ToUserName>
+                          <FromUserName><![CDATA[${userInputData.ToUserName}]]></FromUserName>
+                          <CreateTime>${Date.now()}</CreateTime>
+                          <MsgType><![CDATA[video]]></MsgType>
+                          <Video>
+                            <MediaId><![CDATA[${userInputData.MediaId}]]></MediaId>
+                            <Title><![CDATA[测试标题]]></Title>
+                            <Description><![CDATA[测试描述]]></Description>
+                          </Video>
+                        </xml>`)
+      }*/
+      else {
+        response.send(`
+                        <xml>
+                          <ToUserName><![CDATA[${userInputData.FromUserName}]]></ToUserName>
+                          <FromUserName><![CDATA[${userInputData.ToUserName}]]></FromUserName>
+                          <CreateTime>${Date.now()}</CreateTime>
+                          <MsgType><![CDATA[text]]></MsgType>
+                          <Content><![CDATA[你说什么我听不懂]]></Content>
+                        </xml>`)
+      }
+
 
     }
 
@@ -95,42 +157,6 @@ module.exports = ()=>{
 
   }
 }
-
-//获取微信服务器发过来的xml数据
-function getXMLData(request) {
-  return new Promise((resolve)=>{
-    let result = ''
-    request.on('data',(data)=>{
-      result += data
-    })
-    request.on('end',()=>{
-      resolve(result)
-    })
-  })
-}
-
-//将xml数据整理成js对象
-function parseXml2Js(xmlData) {
-  let result = null
-  parseString(xmlData,{trim:true},(err,data)=>{
-    if(!err){
-      result = data
-    }else{
-      console.log(err)
-    }
-  })
-  return result
-}
-
-//进一步格式化数据
-function formatObjData({xml}) {
-  let result = {}
-  for (let key in xml){
-    result[key] = xml[key][0]
-  }
-  return result
-}
-
 
 
 
